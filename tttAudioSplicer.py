@@ -6,7 +6,9 @@ import pysrt
 def main():
     epNum = str(input("Enter episode number: "))
     audioFile, textFile = getEpisode(epNum)
-    print(audioFile, textFile)
+    text = pysrt.open(textFile)
+    spliceAudio(audioFile, "mp3", text, epNum)
+    
 
 def getEpisode(epNum):
    audioPath = glob('Audio/'+str(epNum)+'*.*')
@@ -17,7 +19,7 @@ def getEpisode(epNum):
    if textPath == []:
        print("Could not locate text")
        return None
-   return audioPath, textPath
+   return audioPath[0], textPath[0]
 
 def toMilli(time):
     timeMilli = time.hours*3600000
@@ -26,28 +28,31 @@ def toMilli(time):
     timeMilli += time.milliseconds
     return timeMilli
     
-def getTimes(textFile, index):
-    text = pysrt.open(textFile)
+def getTime(text, index):
     timeStart = toMilli(text[index].start)
     timeEnd = toMilli(text[index].end)
     time = [timeStart, timeEnd]
     print(text[index].text)
+    print(timeStart, timeEnd)
     return time
-
     
-def spliceAudio(fileName, fileType, time):
+def spliceAudio(fileName, fileType, text, epNum):
     if fileName == []:
         print("Could not locate audio file")
         return None
     AudioSegment.converter = "./ffmpeg"
     audioFile = AudioSegment.from_file(fileName, fileType)
-    clip = audioFile[time[0]:time[1]]
-    clip.export("testClip", format=fileType)
-    #exportClips(clips, mp3)
+    for i in range(len(text)):
+    #for i in range(50):
+        time = getTime(text, i)
+        if time[1]-time[0] <= 1500:
+            clip = audioFile[time[0]-750:time[1]+750]
+        else:
+            clip = audioFile[time[0]-200:time[1]+200]
+        exportClip(clip, i+1, "mp3", epNum)
     
-def exportClips(clips, fileType): 
-    #Export all of the individual chunks as mp3 files
-    for i, clip in enumerate(clips):
-        clip_name = "{0}Clip.{1}".format(i, fileType)
+def exportClip(clip, clipNum,  fileType, epNum): 
+    #Export all of the individual clips as mp3 files
+        clip_name = "ExportedAudio/{0}Clip{1}.{2}".format(clipNum, epNum, fileType)
         print("exporting", clip_name)
         clip.export(clip_name, format=fileType)
